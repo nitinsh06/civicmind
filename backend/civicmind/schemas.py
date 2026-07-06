@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
+
+
 
 class IncidentCreate(BaseModel):
     title: str
@@ -8,6 +10,8 @@ class IncidentCreate(BaseModel):
     longitude: Optional[float] = None
     imageUrl: Optional[str] = None
     address: Optional[str] = None
+    turnstileToken: Optional[str] = None
+    idToken: Optional[str] = None
 
 class IncidentUpdateStatus(BaseModel):
     status: str
@@ -40,18 +44,28 @@ class IncidentResponse(BaseModel):
     status: str
     created_at: str
     
-    # AI analysis flattened or grouped
-    category: str
-    severity: str
-    responsible_department: str
-    confidence: float
-    summary: str
-    
     # Drone fields
     damage_assessment: Optional[str] = None
     severity_estimate: Optional[str] = None
     confidence_score: Optional[float] = None
     drone_summary: Optional[str] = None
     verification_status: Optional[str] = None
+
+    # Geolocation lookup field
+    ip_loc: Optional[dict] = None
+
+    # AI analysis payload ({"text": {...}, "media": {...}}) — must be declared
+    # here or FastAPI's response_model filtering silently strips it
+    ai_analysis: Optional[dict] = None
+
+    # Analysis status field
+    analysis_status: Optional[str] = None
+    analysis_error: Optional[str] = None
+
+    # Reporter identity & trust (authenticated reports score higher)
+    reporter: Optional[dict] = None
+
+    # Tagging keywords field
+    tags: Optional[List[str]] = []
 
     model_config = ConfigDict(from_attributes=True)

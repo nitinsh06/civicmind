@@ -8,7 +8,6 @@ def get_firestore_client():
     if not firebase_admin._apps:
         sa_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
         sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        project_id = os.environ.get("FIREBASE_PROJECT_ID")
         
         if sa_json:
             # Parse the JSON string. If there are syntax or parsing errors, this will raise a JSONDecodeError loudly.
@@ -22,13 +21,10 @@ def get_firestore_client():
             cred = credentials.Certificate(sa_path)
             firebase_admin.initialize_app(cred)
             print("Firebase Admin initialized via GOOGLE_APPLICATION_CREDENTIALS path.")
-        elif project_id:
-            os.environ["FIRESTORE_PROJECT_ID"] = project_id
-            firebase_admin.initialize_app(options={"projectId": project_id})
-            print(f"Firebase Admin initialized with Project ID: {project_id}")
         else:
-            raise ValueError(
-                "Firebase is not configured. Please set the 'FIREBASE_SERVICE_ACCOUNT_JSON' environment variable."
-            )
+            # Cloud Run or Default credentials fallback (Application Default Credentials)
+            # This automatically resolves metadata-server credentials inside Google Cloud runtimes.
+            firebase_admin.initialize_app()
+            print("Firebase Admin initialized via Application Default Credentials (ADC) fallback.")
             
     return firestore.client()

@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache"
 import { Incident } from "@/lib/types"
+import { revalidatePath } from "next/cache"
 
-const BACKEND_URL = process.env.BACKEND_API_URL || "http://127.0.0.1:8000"
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
 // Convert flat database schema fields from Python API to nested frontend model structure
 function mapIncidentResponse(flat: any): Incident {
@@ -18,12 +18,32 @@ function mapIncidentResponse(flat: any): Incident {
     status: flat.status,
     created_at: flat.created_at,
     ai_analysis: {
-      category: flat.category,
-      severity: flat.severity,
-      responsible_department: flat.responsible_department,
-      confidence: flat.confidence,
-      summary: flat.summary,
+      text: flat.ai_analysis?.text
+        ? {
+            category: flat.ai_analysis.text.category,
+            severity: flat.ai_analysis.text.severity,
+            responsible_department: flat.ai_analysis.text.responsible_department,
+            analysis_confidence: flat.ai_analysis.text.analysis_confidence,
+            summary: flat.ai_analysis.text.summary,
+            tags: flat.ai_analysis.text.tags || [],
+          }
+        : undefined,
+      media: flat.ai_analysis?.media
+        ? {
+            category: flat.ai_analysis.media.category,
+            severity: flat.ai_analysis.media.severity,
+            department: flat.ai_analysis.media.department,
+            analysis_confidence: flat.ai_analysis.media.analysis_confidence,
+            summary: flat.ai_analysis.media.summary,
+            visible_objects: flat.ai_analysis.media.visible_objects || [],
+            recommended_action: flat.ai_analysis.media.recommended_action,
+          }
+        : flat.ai_analysis?.media === null
+        ? null
+        : undefined,
     },
+    analysis_status: flat.analysis_status,
+    reporter: flat.reporter || undefined,
     drone_verification: flat.verification_status
       ? {
           damage_assessment: flat.damage_assessment,
@@ -40,13 +60,16 @@ function mapIncidentResponse(flat: any): Incident {
 export async function getIncidentsAction(): Promise<Incident[]> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/incidents`, {
+      method: "GET",
       cache: "no-store",
     })
+
     if (!res.ok) {
-      throw new Error(`Failed to fetch incidents: ${res.statusText}`)
+      throw new Error(`Failed to fetch: ${res.statusText}`)
     }
+
     const data = await res.json()
-    return data.map(mapIncidentResponse)
+    return Array.isArray(data) ? data.map(mapIncidentResponse) : []
   } catch (error) {
     console.error("Error in getIncidentsAction:", error)
     return []
@@ -61,6 +84,8 @@ export async function submitIncidentAction(data: {
   longitude: number | null
   imageUrl?: string
   address?: string
+  turnstileToken?: string
+  idToken?: string
 }) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/incidents`, {
@@ -111,8 +136,8 @@ export async function updateIncidentStatusAction(id: string, status: Incident["s
   }
 }
 
-// Submit drone verification imagery to FastAPI
-export async function verifyDroneIncidentAction(id: string, base64Image: string) {
+// Verify imagery via drone scan (FastAPI)
+export async function verifyDroneImageryAction(id: string, base64Image: string) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/incidents/${id}/verify-drone`, {
       method: "POST",
@@ -124,15 +149,14 @@ export async function verifyDroneIncidentAction(id: string, base64Image: string)
     })
 
     if (!res.ok) {
-      const errDetail = await res.text()
-      throw new Error(errDetail || "Backend API returned error on drone upload")
+      throw new Error(`Failed to verify drone imagery: ${res.statusText}`)
     }
 
     const updated = await res.json()
     revalidatePath("/")
     return { success: true, incident: mapIncidentResponse(updated) }
   } catch (error: any) {
-    console.error("Error in verifyDroneIncidentAction:", error)
-    return { success: false, error: error.message || "Failed to process drone imagery" }
+    console.error("Error in verifyDroneImageryAction:", error)
+    return { success: false, error: error.message || "Failed drone verification" }
   }
 }

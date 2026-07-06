@@ -15,7 +15,7 @@ CivicMind transforms unstructured citizen complaints (potholes, flooding, garbag
 - **Operations Dashboard** (`/dashboard`) — KPI tiles, severity-prioritized incident queue with live refresh, category breakdown, status workflow (pending → investigating → dispatched → resolved), and a Leaflet map with severity-colored markers.
 - **Incident Reports** (`/incidents`) — public, per-incident intelligence cards: AI text analysis, citizen description, reporter trust, hashtags, media evidence, detected objects, and recommended actions.
 - **Drone verification** — upload drone imagery against an incident; Gemini Vision assesses damage and can auto-escalate the incident status.
-- **Security** — Cloudflare Turnstile bot protection on submission (fail-open for resilience), CORS allowlist, server-side token verification, and environment-based secrets.
+- **Security** — Cloudflare Turnstile bot protection on submission (fail-closed), admin-key-guarded write endpoints (status updates and drone analysis are only callable by the Next.js server, never directly), PII redaction on the public API (reporter emails and IP geolocation never leave Firestore), CORS allowlist, server-side Firebase token verification, and environment-based secrets.
 
 ## Architecture
 
@@ -51,12 +51,12 @@ Storage      Firestore     (Vertex AI)
 
 ## API
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/incidents` | List all incidents with AI analysis |
-| `POST` | `/api/incidents` | Submit a report (kicks off background AI analysis) |
-| `PATCH` | `/api/incidents/{id}/status` | Update workflow status |
-| `POST` | `/api/incidents/{id}/verify-drone` | Analyze drone imagery for an incident |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/incidents` | public | List incidents with AI analysis (PII redacted) |
+| `POST` | `/api/incidents` | Turnstile token | Submit a report (kicks off background AI analysis) |
+| `PATCH` | `/api/incidents/{id}/status` | admin key | Update workflow status |
+| `POST` | `/api/incidents/{id}/verify-drone` | admin key | Analyze drone imagery for an incident |
 
 ## Running locally
 
@@ -83,7 +83,8 @@ npm run dev
 | `GOOGLE_CLOUD_LOCATION` | Vertex AI region (default `us-central1`) |
 | `GEMINI_API_KEY` | Alternative to Vertex AI when `GOOGLE_CLOUD_PROJECT` is unset |
 | `GEMINI_MODEL_NAME` | Model override (default `gemini-2.5-flash`) |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile server-side verification |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile server-side verification (fail-closed when set) |
+| `ADMIN_API_KEY` | Shared secret between the Next.js server and FastAPI admin endpoints |
 | `NEXT_PUBLIC_API_URL` | Backend URL for the frontend's server actions |
 
 ## Deployment
@@ -92,9 +93,10 @@ Both services deploy from source to Cloud Run:
 
 ```bash
 gcloud run deploy civicmind-api --source backend --region asia-south1 \
-  --update-env-vars "GOOGLE_CLOUD_PROJECT=<project-id>,GOOGLE_CLOUD_LOCATION=us-central1"
+  --update-env-vars "GOOGLE_CLOUD_PROJECT=<project-id>,GOOGLE_CLOUD_LOCATION=us-central1,ADMIN_API_KEY=<secret>"
 
-gcloud run deploy civicmind-web --source frontend --region asia-south1
+gcloud run deploy civicmind-web --source frontend --region asia-south1 \
+  --update-env-vars "ADMIN_API_KEY=<secret>"
 ```
 
 ## Roadmap

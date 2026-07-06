@@ -1,7 +1,7 @@
 import os
 import time
 from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, status, Request, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, Request, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -39,18 +39,34 @@ app.add_middleware(
 )
 
 
+def require_admin_key(x_admin_key: str | None = Header(default=None)):
+    """Guard for state-changing / Gemini-billing endpoints.
+
+    The key is only known to the Next.js server (server actions attach it
+    server-side; it never reaches the browser). If ADMIN_API_KEY is unset,
+    the guard is disabled for local development.
+    """
+    expected = os.environ.get("ADMIN_API_KEY")
+    if expected and x_admin_key != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid admin key.",
+        )
+
+
 async def verify_turnstile(token: str | None, ip: str | None) -> tuple[bool, str]:
     """Verify a Cloudflare Turnstile token.
 
-    Fail-open policy for demo resilience: only rejects when Cloudflare
-    explicitly says the token is invalid. Missing config, missing token,
-    or Cloudflare being unreachable all allow the request through.
+    Fail-closed for spam/billing protection: when a secret is configured,
+    a missing or invalid token rejects the request. The only fail-open
+    case is Cloudflare's siteverify being unreachable (not attacker-
+    controllable), so an outage can't break legitimate submissions.
     """
     secret = os.environ.get("TURNSTILE_SECRET_KEY")
     if not secret:
         return True, "not-configured"
     if not token:
-        return True, "no-token"
+        return False, "missing-token"
     try:
         import httpx
         payload = {"secret": secret, "response": token}
@@ -193,7 +209,7 @@ async def create_incident(
             detail=f"Failed to submit incident: {str(e)}"
         )
 
-@app.patch("/api/incidents/{incident_id}/status", response_model=IncidentResponse)
+@app.patch("/api/incidents/{incident_id}/status", response_model=IncidentResponse, dependencies=[Depends(require_admin_key)])
 def update_incident_status_route(incident_id: str, status_in: IncidentUpdateStatus, db = Depends(get_firestore_client)):
     try:
         doc_ref = db.collection("incidents").document(incident_id)
@@ -216,7 +232,7 @@ def update_incident_status_route(incident_id: str, status_in: IncidentUpdateStat
             detail=f"Failed to update status: {str(e)}"
         )
 
-@app.post("/api/incidents/{incident_id}/verify-drone", response_model=IncidentResponse)
+@app.post("/api/incidents/{incident_id}/verify-drone", response_model=IncidentResponse, dependencies=[Depends(require_admin_key)])
 def verify_incident_drone(incident_id: str, drone_in: DroneVerifyRequest, db = Depends(get_firestore_client)):
     try:
         doc_ref = db.collection("incidents").document(incident_id)

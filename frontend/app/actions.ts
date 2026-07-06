@@ -5,6 +5,12 @@ import { revalidatePath } from "next/cache"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
+// Server-only secret (no NEXT_PUBLIC prefix): attached to admin endpoints
+// from server actions, never shipped to the browser.
+const ADMIN_HEADERS: Record<string, string> = process.env.ADMIN_API_KEY
+  ? { "x-admin-key": process.env.ADMIN_API_KEY }
+  : {}
+
 // Convert flat database schema fields from Python API to nested frontend model structure
 function mapIncidentResponse(flat: any): Incident {
   return {
@@ -118,6 +124,7 @@ export async function updateIncidentStatusAction(id: string, status: Incident["s
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        ...ADMIN_HEADERS,
       },
       body: JSON.stringify({ status }),
       cache: "no-store",
@@ -143,6 +150,7 @@ export async function verifyDroneImageryAction(id: string, base64Image: string) 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...ADMIN_HEADERS,
       },
       body: JSON.stringify({ base64Image }),
       cache: "no-store",

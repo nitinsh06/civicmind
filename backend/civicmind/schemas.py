@@ -33,6 +33,15 @@ class DroneVerificationResponse(BaseModel):
     drone_summary: str
     verification_status: str
 
+class ReporterPublic(BaseModel):
+    """Public projection of the reporter block — never expose email, uid,
+    or photo_url through the API; the full record stays in Firestore."""
+    authenticated: bool = False
+    name: Optional[str] = None
+    trust_level: Optional[str] = None
+    trust_score: Optional[float] = None
+
+
 class IncidentResponse(BaseModel):
     id: str
     title: str
@@ -51,8 +60,8 @@ class IncidentResponse(BaseModel):
     drone_summary: Optional[str] = None
     verification_status: Optional[str] = None
 
-    # Geolocation lookup field
-    ip_loc: Optional[dict] = None
+    # NOTE: ip_loc (reporter IP geolocation) is intentionally NOT exposed —
+    # it stays in Firestore for internal use only.
 
     # AI analysis payload ({"text": {...}, "media": {...}}) — must be declared
     # here or FastAPI's response_model filtering silently strips it
@@ -62,8 +71,8 @@ class IncidentResponse(BaseModel):
     analysis_status: Optional[str] = None
     analysis_error: Optional[str] = None
 
-    # Reporter identity & trust (authenticated reports score higher)
-    reporter: Optional[dict] = None
+    # Reporter trust (public projection; PII filtered by ReporterPublic)
+    reporter: Optional[ReporterPublic] = None
 
     # Tagging keywords field
     tags: Optional[List[str]] = []

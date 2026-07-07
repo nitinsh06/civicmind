@@ -21,7 +21,29 @@ from civicmind.analysis import analyze_incident
 from civicmind.storage import upload_incident_image
 from civicmind.users import resolve_reporter
 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+
+def rate_limit_key(request: Request) -> str:
+    # Cloud Run sits behind a proxy; the real client is in x-forwarded-for
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=rate_limit_key, default_limits=["120/minute"])
+
 app = FastAPI(title="CivicMind AI Platform API", version="0.1.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Global default (120/min per IP) for every route; sensitive routes carry
+# tighter per-route limits below.
+from slowapi.middleware import SlowAPIMiddleware
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware restricted to production URL and local development
 allowed_origins = [
@@ -155,6 +177,7 @@ def read_incidents(db = Depends(get_firestore_client)):
         )
 
 @app.post("/api/incidents", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")  # each creation triggers Gemini analysis
 async def create_incident(
     request: Request, 
     incident_in: IncidentCreate, 
@@ -234,7 +257,8 @@ async def create_incident(
         )
 
 @app.patch("/api/incidents/{incident_id}/status", response_model=IncidentResponse, dependencies=[Depends(require_admin_key)])
-def update_incident_status_route(incident_id: str, status_in: IncidentUpdateStatus, db = Depends(get_firestore_client)):
+@limiter.limit("30/minute")
+def update_incident_status_route(request: Request, incident_id: str, status_in: IncidentUpdateStatus, db = Depends(get_firestore_client)):
     try:
         doc_ref = db.collection("incidents").document(incident_id)
         doc = doc_ref.get()
@@ -257,7 +281,8 @@ def update_incident_status_route(incident_id: str, status_in: IncidentUpdateStat
         )
 
 @app.post("/api/incidents/{incident_id}/verify-drone", response_model=IncidentResponse, dependencies=[Depends(require_admin_key)])
-def verify_incident_drone(incident_id: str, drone_in: DroneVerifyRequest, db = Depends(get_firestore_client)):
+@limiter.limit("10/minute")  # each verification triggers Gemini Vision
+def verify_incident_drone(request: Request, incident_id: str, drone_in: DroneVerifyRequest, db = Depends(get_firestore_client)):
     try:
         doc_ref = db.collection("incidents").document(incident_id)
         doc = doc_ref.get()

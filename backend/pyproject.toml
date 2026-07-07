@@ -16,4 +16,5 @@ dependencies = [
     "firebase-admin>=7.5.0",
     "httpx>=0.28.1",
     "google-genai>=2.10.0",
+    "slowapi>=0.1.10",
 ]

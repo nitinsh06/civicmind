@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Script from "next/script"
 
 import SiteHeader from "@/components/SiteHeader"
@@ -20,6 +20,38 @@ const INPUT =
 
 export default function ReportPage() {
   const { user, signIn } = useAuth()
+
+  // Explicit Turnstile rendering: implicit (class-based) rendering only
+  // scans the DOM when the CF script first loads, so it misses this page
+  // after client-side navigation. Render programmatically instead.
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetId = useRef<string | null>(null)
+
+  useEffect(() => {
+    const tryRender = () => {
+      const ts = (window as any).turnstile
+      if (!ts || !turnstileRef.current) return false
+      if (widgetId.current === null) {
+        widgetId.current = ts.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          theme: "light",
+        })
+      }
+      return true
+    }
+    if (tryRender()) return
+    const poll = setInterval(() => {
+      if (tryRender()) clearInterval(poll)
+    }, 200)
+    return () => {
+      clearInterval(poll)
+      const ts = (window as any).turnstile
+      if (ts && widgetId.current !== null) {
+        try { ts.remove(widgetId.current) } catch {}
+        widgetId.current = null
+      }
+    }
+  }, [])
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -70,9 +102,12 @@ export default function ReportPage() {
     setIsSubmitting(true)
     setSuccessResult(null)
 
+    const ts = (window as any).turnstile
     const turnstileToken =
+      (widgetId.current !== null ? ts?.getResponse(widgetId.current) : undefined) ||
       (document.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null)
-        ?.value || undefined
+        ?.value ||
+      undefined
 
     // Authenticated reports carry a higher trust score on the backend
     let idToken: string | undefined
@@ -95,7 +130,9 @@ export default function ReportPage() {
 
     setIsSubmitting(false)
     // Tokens are single-use; issue a fresh one for the next submission
-    ;(window as any).turnstile?.reset()
+    if (widgetId.current !== null) {
+      try { ts?.reset(widgetId.current) } catch {}
+    }
 
     if (result.success && result.incident) {
       setSuccessResult(result.incident)
@@ -285,9 +322,12 @@ export default function ReportPage() {
             </button>
           </div>
 
-          {/* Cloudflare Turnstile bot protection (implicit render) */}
-          <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-theme="light" />
-          <Script src="https://challenges.cloudflare.com/turnstile/api.js" strategy="afterInteractive" />
+          {/* Cloudflare Turnstile bot protection (explicitly rendered) */}
+          <div ref={turnstileRef} className="min-h-[65px]" />
+          <Script
+            src="https://challenges.cloudflare.com/turnstile/api.js?render=explicit"
+            strategy="afterInteractive"
+          />
 
           <button
             type="submit"

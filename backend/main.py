@@ -109,6 +109,30 @@ async def get_ip_geolocation(ip: str) -> dict:
 
 
 # Endpoints
+@app.get("/api/incidents/mine", response_model=list[IncidentResponse])
+def read_my_incidents(authorization: str | None = Header(default=None), db = Depends(get_firestore_client)):
+    """Reports filed by the signed-in citizen only (Firebase ID token)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in to view your reports.")
+    token = authorization.split(" ", 1)[1]
+    try:
+        from firebase_admin import auth as firebase_auth
+        decoded = firebase_auth.verify_id_token(token)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired — sign in again.")
+
+    try:
+        docs = db.collection("incidents").where("reporter.uid", "==", decoded["uid"]).stream()
+        items = [d.to_dict() for d in docs]
+        items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        return items
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch your reports: {str(e)}"
+        )
+
+
 @app.get("/api/incidents", response_model=list[IncidentResponse])
 def read_incidents(db = Depends(get_firestore_client)):
     try:

@@ -1,117 +1,90 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-:root {
-  --background: #09090b; /* Zinc 950 */
-  --foreground: #f4f4f5; /* Zinc 100 */
-  --card: #18181b; /* Zinc 900 */
-  --card-border: #27272a; /* Zinc 800 */
-  --muted: #71717a; /* Zinc 500 */
-  --muted-foreground: #a1a1aa; /* Zinc 400 */
-  --primary: #06b6d4; /* Cyan 500 */
-  --primary-hover: #0891b2; /* Cyan 600 */
-  --accent: #6366f1; /* Indigo 500 */
-  
-  --severity-low: #10b981; /* Green 500 */
-  --severity-medium: #eab308; /* Yellow 500 */
-  --severity-high: #f97316; /* Orange 500 */
-  --severity-critical: #ef4444; /* Red 500 */
-  
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+/*
+ * CivicMind design tokens — "civic works" system.
+ * Surfaces read like municipal survey paper; ink is blueprint navy;
+ * the single action color is road-signage amber.
+ */
+@theme {
+  --color-paper: #f2f3ee;
+  --color-card: #fbfbf9;
+  --color-ink: #132238;
+  --color-ink-soft: #46566c;
+  --color-ink-faint: #7c8798;
+  --color-line: #dcded4;
+  --color-signal: #e8930c;
+  --color-signal-deep: #b36f04;
+  --color-signal-wash: #fdf3e0;
+  --color-verified: #177e52;
+  --color-verified-wash: #e7f3ec;
+  --color-critical: #c6402c;
+  --color-critical-wash: #faeae6;
+
+  --font-display: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-barlow), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   overflow-x: hidden;
 }
 
-/* Custom scrollbar */
+/* Signature: road-work hazard stripe. Used sparingly — hero divider and
+   critical-incident edges only. */
+.hazard-stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    #132238 0 10px,
+    #e8930c 10px 20px
+  );
+}
+
+/* Survey-map grid for the landing hero */
+.survey-grid {
+  background-image:
+    linear-gradient(rgba(19, 34, 56, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(19, 34, 56, 0.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: var(--color-paper);
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--color-line);
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
 
-/* Leaflet map styles for dark mode compatibility */
+/* Leaflet, tuned to the paper surface */
 .leaflet-container {
-  background: #09090b !important;
+  background: var(--color-paper) !important;
   font-family: inherit;
 }
-.leaflet-bar {
-  border: 1px solid #27272a !important;
-  box-shadow: none !important;
-}
-.leaflet-bar a {
-  background-color: #18181b !important;
-  color: #f4f4f5 !important;
-  border-bottom: 1px solid #27272a !important;
-}
-.leaflet-bar a:hover {
-  background-color: #27272a !important;
-}
 .leaflet-popup-content-wrapper {
-  background: #18181b !important;
-  color: #f4f4f5 !important;
-  border: 1px solid #27272a;
   border-radius: 8px !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
-}
-.leaflet-popup-tip {
-  background: #18181b !important;
-}
-.leaflet-popup-close-button {
-  color: #a1a1aa !important;
+  border: 1px solid var(--color-line);
 }
 
-/* Glassmorphism utility */
-.glass-panel {
-  background: rgba(24, 24, 27, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.glass-panel-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-panel-hover:hover {
-  background: rgba(39, 39, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
-}
-
-/* Glow effects */
-.glow-cyan {
-  box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.15);
-}
-.glow-indigo {
-  box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.15);
-}
-
-/* Pulse animation for critical issues */
-@keyframes critical-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  50% {
-    transform: scale(1.08);
-    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
-  }
-}
-
-.animate-critical-pulse {
-  animation: critical-pulse 2s infinite;
 }

@@ -82,6 +82,25 @@ export async function getIncidentsAction(): Promise<Incident[]> {
   }
 }
 
+// Fetch only the signed-in citizen's reports (Firebase ID token verified server-side)
+export async function getMyIncidentsAction(idToken: string): Promise<Incident[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/incidents/mine`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${idToken}` },
+      cache: "no-store",
+    })
+    if (!res.ok) {
+      throw new Error(`Failed to fetch your reports: ${res.statusText}`)
+    }
+    const data = await res.json()
+    return Array.isArray(data) ? data.map(mapIncidentResponse) : []
+  } catch (error) {
+    console.error("Error in getMyIncidentsAction:", error)
+    return []
+  }
+}
+
 // Submit a citizen report to FastAPI
 export async function submitIncidentAction(data: {
   title: string

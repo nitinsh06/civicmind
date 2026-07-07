@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 
+import SiteHeader from "@/components/SiteHeader"
 import {
   getIncidentsAction,
   updateIncidentStatusAction,
@@ -16,7 +17,7 @@ import { getIncidentSeverity, SEVERITY_RANK } from "@/lib/severity"
 const IncidentMap = dynamic(() => import("@/components/IncidentMap"), {
   ssr: false,
   loading: () => (
-    <div className="h-full w-full flex items-center justify-center text-xs text-zinc-400">
+    <div className="h-full w-full flex items-center justify-center text-xs text-ink-faint">
       Loading map…
     </div>
   ),
@@ -63,10 +64,10 @@ function SeverityBadge({ severity, analysisStatus }: { severity?: string; analys
 
 function StatTile({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl p-4">
-      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{label}</p>
-      <p className="text-3xl font-bold text-zinc-900 mt-1 tabular-nums">{value}</p>
-      {hint && <p className="text-[10px] text-zinc-400 mt-1">{hint}</p>}
+    <div className="bg-card border border-line rounded-xl p-4">
+      <p className="font-display text-[11px] font-bold text-ink-faint uppercase tracking-[0.14em]">{label}</p>
+      <p className="font-mono text-3xl font-medium text-ink mt-1 tabular-nums">{value}</p>
+      {hint && <p className="text-[10px] text-ink-faint mt-1">{hint}</p>}
     </div>
   )
 }
@@ -156,33 +157,20 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans">
+    <div className="min-h-screen">
       {/* Hidden shared file input for drone verification */}
       <input ref={droneInputRef} type="file" accept="image/*" className="hidden" onChange={handleDroneFile} />
 
-      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between sticky top-0 z-[1000]">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight">CivicMind — Operations Dashboard</h1>
-          <p className="text-[11px] text-zinc-500">
-            AI-triaged civic incidents, prioritized by severity
+      <SiteHeader />
+      <div className="border-b border-line bg-card">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <h1 className="font-display text-3xl font-bold tracking-tight">Operations dashboard</h1>
+          <p className="text-[12px] text-ink-soft">
+            AI-triaged incidents, ranked by severity
             {lastRefresh && <> · refreshed {lastRefresh.toLocaleTimeString()}</>}
           </p>
         </div>
-        <nav className="flex items-center gap-2">
-          <Link
-            href="/incidents"
-            className="h-9 px-4 inline-flex items-center border border-zinc-300 hover:bg-zinc-50 text-zinc-800 text-xs font-bold rounded-lg transition-all"
-          >
-            Incident Reports
-          </Link>
-          <Link
-            href="/"
-            className="h-9 px-4 inline-flex items-center bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-lg transition-all"
-          >
-            + Report Incident
-          </Link>
-        </nav>
-      </header>
+      </div>
 
       <main className="p-6 max-w-7xl mx-auto space-y-6">
         {error && (
@@ -200,9 +188,9 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map */}
-          <div className="lg:col-span-2 bg-white border border-zinc-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-200">
-              <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Incident Map</h2>
+          <div className="lg:col-span-2 bg-card border border-line rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-line">
+              <h2 className="font-display text-[13px] font-bold text-ink-soft uppercase tracking-[0.14em]">Incident Map</h2>
             </div>
             <div className="h-105">
               <IncidentMap incidents={incidents} />
@@ -210,23 +198,23 @@ export default function Dashboard() {
           </div>
 
           {/* Category breakdown */}
-          <div className="bg-white border border-zinc-200 rounded-xl">
-            <div className="px-4 py-3 border-b border-zinc-200">
-              <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Reports by Category</h2>
+          <div className="bg-card border border-line rounded-xl">
+            <div className="px-4 py-3 border-b border-line">
+              <h2 className="font-display text-[13px] font-bold text-ink-soft uppercase tracking-[0.14em]">Reports by Category</h2>
             </div>
             <div className="p-4 space-y-3">
               {categories.length === 0 && (
-                <p className="text-xs text-zinc-400">No reports yet.</p>
+                <p className="text-xs text-ink-faint">No reports yet.</p>
               )}
               {categories.map(([cat, count]) => (
                 <div key={cat}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-zinc-700 capitalize">{cat}</span>
-                    <span className="text-zinc-500 tabular-nums">{count}</span>
+                    <span className="text-ink capitalize">{cat}</span>
+                    <span className="font-mono text-[11px] text-ink-soft tabular-nums">{count}</span>
                   </div>
-                  <div className="h-2 bg-zinc-100 rounded-sm overflow-hidden">
+                  <div className="h-2 bg-line/50 rounded-sm overflow-hidden">
                     <div
-                      className="h-full bg-zinc-800 rounded-sm transition-all"
+                      className="h-full bg-ink rounded-sm transition-all"
                       style={{ width: `${(count / maxCategory) * 100}%` }}
                     />
                   </div>
@@ -237,18 +225,18 @@ export default function Dashboard() {
         </div>
 
         {/* Priority queue */}
-        <div className="bg-white border border-zinc-200 rounded-xl">
-          <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-            <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Priority Queue</h2>
-            <span className="text-[10px] text-zinc-400">auto-refreshes every {POLL_INTERVAL_MS / 1000}s</span>
+        <div className="bg-card border border-line rounded-xl">
+          <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+            <h2 className="font-display text-[13px] font-bold text-ink-soft uppercase tracking-[0.14em]">Priority Queue</h2>
+            <span className="text-[10px] text-ink-faint">auto-refreshes every {POLL_INTERVAL_MS / 1000}s</span>
           </div>
 
           {loading ? (
-            <p className="p-6 text-xs text-zinc-400">Loading incidents…</p>
+            <p className="p-6 text-xs text-ink-faint">Loading incidents…</p>
           ) : sorted.length === 0 ? (
-            <p className="p-6 text-xs text-zinc-400">No incidents reported yet.</p>
+            <p className="p-6 text-xs text-ink-faint">No incidents reported yet.</p>
           ) : (
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-line/60">
               {sorted.map((incident) => {
                 const text = incident.ai_analysis?.text
                 const severity = getIncidentSeverity(incident)
@@ -259,14 +247,14 @@ export default function Dashboard() {
                       <img
                         src={incident.imageUrl}
                         alt=""
-                        className="w-20 h-20 object-cover rounded-lg border border-zinc-200 shrink-0"
+                        className="w-20 h-20 object-cover rounded-lg border border-line shrink-0"
                       />
                     )}
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         <SeverityBadge severity={severity} analysisStatus={incident.analysis_status} />
                         {text?.category && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-soft bg-line/60 px-2 py-0.5 rounded">
                             {text.category}
                           </span>
                         )}
@@ -281,17 +269,17 @@ export default function Dashboard() {
                               ✓ {incident.reporter.trust_level.replaceAll("_", " ")} · {(incident.reporter.trust_score * 100).toFixed(0)}%
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-soft bg-line/60 px-2 py-0.5 rounded">
                               Anonymous · {(incident.reporter.trust_score * 100).toFixed(0)}%
                             </span>
                           )
                         )}
                       </div>
-                      <p className="font-bold text-sm text-zinc-900 truncate">{incident.title}</p>
-                      <p className="text-xs text-zinc-600 line-clamp-2">
+                      <p className="font-bold text-sm text-ink truncate">{incident.title}</p>
+                      <p className="text-xs text-ink-soft line-clamp-2">
                         {text?.summary || incident.description}
                       </p>
-                      <p className="text-[10px] text-zinc-400">
+                      <p className="text-[10px] text-ink-faint">
                         {incident.reporter?.authenticated && incident.reporter.name && <>By {incident.reporter.name} · </>}
                         {text?.responsible_department && <>Dept: <strong>{text.responsible_department}</strong> · </>}
                         {text?.analysis_confidence != null && <>AI confidence {(text.analysis_confidence * 100).toFixed(0)}% · </>}
@@ -304,7 +292,7 @@ export default function Dashboard() {
                         value={incident.status}
                         disabled={busy}
                         onChange={(e) => handleStatusChange(incident.id, e.target.value as Incident["status"])}
-                        className="h-8 px-2 text-xs border border-zinc-300 rounded-lg bg-white focus:outline-none focus:border-zinc-900 capitalize"
+                        className="h-8 px-2 text-xs border border-line rounded-lg bg-card focus:outline-none focus:border-ink capitalize"
                       >
                         {STATUSES.map((s) => (
                           <option key={s} value={s} className="capitalize">{s}</option>
@@ -314,7 +302,7 @@ export default function Dashboard() {
                         type="button"
                         disabled={busy}
                         onClick={() => handleDroneVerify(incident.id)}
-                        className="h-8 px-3 text-[11px] font-bold border border-zinc-300 hover:bg-zinc-50 rounded-lg transition-all disabled:opacity-50"
+                        className="h-8 px-3 text-[11px] font-bold border border-line hover:bg-paper rounded-lg transition-all disabled:opacity-50"
                       >
                         {busy ? "Working…" : "Drone Verify"}
                       </button>

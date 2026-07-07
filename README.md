@@ -2,11 +2,6 @@
 
 CivicMind transforms unstructured citizen complaints (potholes, flooding, garbage, broken streetlights, collapsed infrastructure…) into **structured, actionable civic intelligence**. Citizens report an issue with text, location, and a photo; Google's Gemini analyzes both the text and the image, classifies the issue, estimates severity, assigns the responsible municipal department, and generates an operational summary — before any human ever triages the ticket.
 
-**Live demo**
-
-- Citizen portal: https://civicmind-web-859933805639.asia-south1.run.app
-- API (FastAPI): https://civicmind-api-859933805639.asia-south1.run.app/docs
-
 ## Features
 
 - **Multimodal AI triage** — Gemini analyzes the report text (category, severity, responsible department, confidence, summary, tags) and the uploaded photo (scene summary, detected objects, recommended actions) in a background task, so submission stays instant.

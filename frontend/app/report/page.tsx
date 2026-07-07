@@ -325,7 +325,7 @@ export default function ReportPage() {
           {/* Cloudflare Turnstile bot protection (explicitly rendered) */}
           <div ref={turnstileRef} className="min-h-[65px]" />
           <Script
-            src="https://challenges.cloudflare.com/turnstile/api.js?render=explicit"
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
             strategy="afterInteractive"
           />
 
